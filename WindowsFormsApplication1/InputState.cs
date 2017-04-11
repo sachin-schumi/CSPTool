@@ -5,8 +5,6 @@ using System.Reflection;
 using System.Text;
 using System.IO;
 
-// Class representing input state.
-// this can have list of agents, message type, list of messages etc..
 
 class DataType
 {

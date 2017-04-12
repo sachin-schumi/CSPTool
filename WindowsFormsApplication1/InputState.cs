@@ -11,6 +11,8 @@ class DataType
     public static Dictionary<String, String> typeSet = new Dictionary<string, string>();
     public bool parse(int n, String[] lines, String regex)
     {
+        HashSet<String> existingDataTypes = new HashSet<String>();
+        int cnt = 1;
         for (int i = 1; i <= n; i++)
         {
             var match = Regex.Match(lines[i], regex);
@@ -18,7 +20,16 @@ class DataType
             {
                 String message = match.Groups[1].Value;
                 String type = match.Groups[2].Value;
-                typeSet[message] = type;
+                if (!(existingDataTypes.Contains(type)))
+                {
+                    typeSet[message] = type;
+                    existingDataTypes.Add(type);
+                }
+                else
+                {
+                    typeSet[message] = type + cnt;
+                    cnt++;
+                }
             }
             else
                 return false;

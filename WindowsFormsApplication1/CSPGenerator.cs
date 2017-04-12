@@ -66,17 +66,8 @@ public class CSPGenerator
         ref int genericVariable, StringBuilder variables,ref int pairVariable)
     {
         String key = m.Keys[1];
-        if (m.MessageComponents.Count > 1)
-        {
-            genericVariable++;
-            variables.Append("var<Pair> g" + genericVariable + ";\r\n");
-            pairVariable = genericVariable;
-        }
-        else
-        {
-            genericVariable++;
-            variables.Append("var g" + genericVariable + ";\r\n");
-        }
+        genericVariable++;
+        variables.Append("var<" + Keys.encdec[Keys.encryption] + "> g" + genericVariable + ";\r\n");       
         StringBuilder temp = new StringBuilder("{g" + genericVariable + "=new " + Keys.decryption + "(g" + (genericVariable - 1) + "," + key + ");} ->");
         return temp;
     }
@@ -88,40 +79,63 @@ public class CSPGenerator
     }
 
 
+    private void createPairvar(ref int genericVariable, ref int pairVariable,StringBuilder variables)
+    {
+        genericVariable++;
+        variables.Append("var<Pair> g" + genericVariable + ";\r\n");        
+        pairVariable = genericVariable;
+    }
+
+    private void getSingleFromPair(ref int genericVariable, ref int pairVariable, StringBuilder output,String flag
+        ,StringBuilder variables,ref int i)
+    {
+        genericVariable++;
+        variables.Append("var g" + genericVariable + ";\r\n");
+        if (flag == "second")
+        {
+            output.Append("g" + genericVariable + "=g" + (pairVariable) + ".getsecond();");
+        }
+        else
+        {
+            output.Append("g" + genericVariable + "=g" + (pairVariable) + ".getfirst();");
+        }
+    }
 
     private StringBuilder removePair(List<String> messageComponents, String current
         , ref int genericVariable, StringBuilder variables, ref int i,ref int pairVariable,
-        ref bool isChannelData)
+        ref bool isChannelData,bool isDecrypted)
     {
         StringBuilder output = new StringBuilder("");
-        for (; i < messageComponents.Count; i++)
+        if(i == 0)
+            createPairvar(ref genericVariable,ref pairVariable,variables);
+        if (isChannelData == true)
+        {
+            if(isDecrypted == true)
+                output.Append("g" + genericVariable + "=g" + (genericVariable - 1) + ".result();");
+            else
+                output.Append("g" + genericVariable + "=g" + (genericVariable - 1) + ";");
+        }
+        bool isFound = false;
+        for (; i < messageComponents.Count - 2; i++)
         {
             if (messageComponents[i] == current)
             {
-                genericVariable++;
-                variables.Append("var g" + genericVariable + ";\r\n");
-                if (i == messageComponents.Count - 1)
-                {
-                    output.Append("g" + genericVariable + "=g" + (pairVariable) + ".getsecond();");
-                }
-                else
-                {
-                    output.Append("g" + genericVariable + "=g" + (pairVariable) + ".getfirst();");
-                    i++;
-                }                                             
+                isFound = true;
+                getSingleFromPair(ref genericVariable,ref pairVariable,output,"first",variables,ref i);
+                output.Append("g" + pairVariable + "=g" + pairVariable + ".getsecond();");
                 break;
             }
             else
-            {
-                if (Keys.encryption.Length == 0 && isChannelData == true)
-                {
-                    genericVariable++;
-                    variables.Append("var<Pair> g" + genericVariable + ";\r\n");
-                    output.Append("g" + genericVariable + "=g" + (genericVariable - 1) + ";");
-                    pairVariable = genericVariable;
-                }
+            { 
                 output.Append("g" + pairVariable + "=g" + pairVariable + ".getsecond();");
             }
+        }
+        if (isFound == false)
+        { 
+            if(messageComponents[i] == current)
+                getSingleFromPair(ref genericVariable, ref pairVariable, output, "first", variables, ref i); 
+            else
+                getSingleFromPair(ref genericVariable, ref pairVariable, output, "second", variables, ref i); 
         }
         return output;
     }
@@ -134,15 +148,14 @@ public class CSPGenerator
         String resp = m.Participators[1];
         List<String> messagecomponents = m.MessageComponents;
         StringBuilder temp = new StringBuilder("");
-
+        StringBuilder decryptedMessage = new StringBuilder("");
         if (isDecrypted == true)
         {
-            temp = decryptMessage(m, temp, ref genericVariable, variables,ref pairVariable);
+            decryptedMessage = decryptMessage(m, temp, ref genericVariable, variables, ref pairVariable);
         }
 
         int k = 0;
         bool isChannelData = true;
-        temp.Append("{");
         for (int j = 0; j < messagecomponents.Count; j++)
         {
             String mc = messagecomponents[j];
@@ -155,27 +168,43 @@ public class CSPGenerator
                     if (messagecomponents.Count > 1)
                     {
                         temp.Append(removePair(messagecomponents, mc, ref genericVariable, variables
-                            , ref k, ref pairVariable, ref isChannelData));
+                            , ref k, ref pairVariable, ref isChannelData,isDecrypted));
                         if (isChannelData == true)
                             isChannelData = false;
                     }
                     else
                     {
-                        genericVariable++;
+                        if (isChannelData == true)
+                        {
+                            genericVariable++;
+                            variables.Append("var g" + genericVariable + ";\r\n");
+                            temp.Append("g" + genericVariable + "=g" + (genericVariable - 1) + ".result();");
+                            isChannelData = false;
+                        }
+                        else
+                        {
+                            genericVariable++;
+                        }
                     }
                     String newVar = "g" + genericVariable;
                     Process.aliases[resp + " " + mc] = newVar;
                 }
             }
         }
-        temp.Append("}");
-        if(temp.Length > 0)
-            output[resp].Append(temp + "->");
+        if (temp.Length > 0)
+        {
+            if (isDecrypted == true)
+            {
+                output[resp].Append(decryptedMessage);
+            }
+            output[resp].Append("{" + temp + "}" + " -> ");
+        }
     }
 
     private void InputChannel(Message m, Dictionary<String, StringBuilder> output,
         ref int genericVariable,ref int msgVariable, StringBuilder variables)
     {
+        int tempV = genericVariable;
         String ini = m.Participators[0];
         List<String> messagecomponents = m.MessageComponents;
         StringBuilder temp = new StringBuilder("");
@@ -203,8 +232,9 @@ public class CSPGenerator
         }
         
         temp = formMessage(m, temp, ref msgVariable, variables);
-        
-        output[ini].Append(temp + "->");
+        if (tempV == genericVariable)
+            genericVariable++;
+        output[ini].Append(temp + " -> ");
     }
 
     private void print(StringBuilder variables, Dictionary<String, StringBuilder>  output)
@@ -224,9 +254,7 @@ public class CSPGenerator
         StringBuilder variables = new StringBuilder("");
         Dictionary<String, StringBuilder> output = new Dictionary<String, StringBuilder>();
 
-        StringBuilder enumVariables = new StringBuilder("");
-
-        variables.Append("#import \"C:\\FSDT\\Lib_v0+equal+know\";\r\n\r\n");
+        variables.Append("#import \"Lib_v0+equal+know\";\r\n\r\n");
 
         foreach (KeyValuePair<String, String> entry in DataType.typeSet)
         {
@@ -236,8 +264,7 @@ public class CSPGenerator
             }
             else
             {
-                enumVariables.Append(entry.Key);
-                enumVariables.Append(",");
+                variables.Append("var " + entry.Key + " = new Constant();\r\n");
             }
         }
 
@@ -246,8 +273,8 @@ public class CSPGenerator
             foreach (KeyValuePair<String, String[]> entry in Keys.keyMap)
             {
                 String[] k = entry.Value;
-                variables.Append("var<SKey> " + k[1] + "= new SKey();");
-                variables.Append("var<PKey> " + k[0] + "= new PKey(" + k[1] + ");");
+                variables.Append("var<SKey> " + k[1] + "= new SKey();\r\n");
+                variables.Append("var<PKey> " + k[0] + "= new PKey(" + k[1] + ");\r\n");
             }
         }
         else if (Keys.encryption == "SEnc")
@@ -255,18 +282,11 @@ public class CSPGenerator
             foreach (KeyValuePair<String, String[]> entry in Keys.keyMap)
             {
                 String[] k = entry.Value;
-                variables.Append("var<SKey> " + k[1] + "= new SKey();");
+                variables.Append("var<SKey> " + k[1] + "= new SKey();\r\n");
+                break;
             }
         }
 
-
-        if (!(enumVariables.Equals("")))
-        {
-            enumVariables = new StringBuilder("enum{" + enumVariables);
-            enumVariables.Remove(enumVariables.Length - 1, 1);
-            enumVariables.Append("};");
-            variables.Append(enumVariables);
-        }
         variables.Append("\r\n\r\n");
         variables.Append("channel ca 0;");
         variables.Append("\r\n\r\n");
@@ -290,10 +310,10 @@ public class CSPGenerator
             ini = m.Participators[0];
             resp = m.Participators[1];
             InputChannel(m, output, ref genericVariable, ref msgVariable, variables);
-            output[ini].Append(m.channel + m.InputChannel + ".msg" + msgVariable + "->");
+            output[ini].Append(m.channel + m.InputChannel + ".msg" + msgVariable + " -> ");
             print(variables, output);
             msgVariable++;
-            output[resp].Append(m.channel + m.OutputChannel + ".g" + genericVariable + "->");
+            output[resp].Append(m.channel + m.OutputChannel + ".g" + genericVariable + " -> ");
             HashSet<String> components = new HashSet<String>();
             if (i + 1 < messages.Count)
                 components = new HashSet<String>(messages[i + 1].MessageComponents);
@@ -305,11 +325,24 @@ public class CSPGenerator
 
         }
         File.AppendAllText(@"C:\FSDT\file.csp", variables + Environment.NewLine);
+        StringBuilder protocol = new StringBuilder("Protocol = ");
+        int count = 0;
+        foreach (KeyValuePair<String, String[]> entry in Process.protocol)
+        {
+            String[] data = entry.Value;
+            protocol.Append( entry.Key + "(" + String.Join(",",data) + ")");
+            if(count < Process.protocol.Count - 1)
+                protocol.Append(" ||| ");
+            count++;
+        }
+        protocol.Append(";\r\n\r\n #assert Protocol deadlockfree;\r\n");
+
         List<StringBuilder> outputValues = new List<StringBuilder>(output.Values);
         foreach (StringBuilder s in outputValues)
         {
             String s1 = s + "Skip;";
             File.AppendAllText(@"C:\FSDT\file.csp", s1 + "\r\n\r\n");
         }
+        File.AppendAllText(@"C:\FSDT\file.csp", protocol + "\r\n");
     }
 }

@@ -47,6 +47,7 @@ class Process
 
     public static Dictionary<String, String[]> processMap = new Dictionary<String, String[]>();
     public static Dictionary<String, String> processName = new Dictionary<String, String>();
+    public static Dictionary<String, String[]> protocol = new Dictionary<String, String[]>();
     public bool parse(int n, String[] parts, String regex)
     {
         bool found = true;
@@ -74,6 +75,7 @@ class Process
                         break;
                     else
                     {
+                        protocol[procname] = knownData;
                         processMap[agent] = knownData;
                     }
                 }
@@ -113,11 +115,11 @@ class Keys
                 isParseable = true;
                 String agent1 = match.Groups[1].Value;
                 String agent2 = match.Groups[2].Value;
-                keys[0] = agent1 + match.Groups[3].Value;
-                keys[1] = agent2 + match.Groups[4].Value;
+                keys[0] = match.Groups[3].Value;
+                keys[1] = match.Groups[4].Value;
                 keyMap[agent1] = keys;
                 keyMap[agent2] = keys;
-
+                inversekeys[keys[0]] = keys[1];
             }
         }
         else if (n == 2)
@@ -130,8 +132,8 @@ class Keys
                 {
                     isParseable = true;
                     String agent = match.Groups[1].Value;
-                    keys[0] = agent + match.Groups[2].Value;
-                    keys[1] = agent + match.Groups[3].Value;
+                    keys[0] = match.Groups[2].Value;
+                    keys[1] = match.Groups[3].Value;
                     keyMap[agent] = keys;
                     inversekeys[keys[0]] = keys[1];
                 }

@@ -9,7 +9,7 @@ using System.IO;
 class DataType
 {
     public static Dictionary<String, String> typeSet = new Dictionary<string, string>();
-    public bool parse(int n, String[] lines, String regex)
+    public bool parse(int n, String[] lines, String regex, int[] errorLine)
     {
         HashSet<String> existingDataTypes = new HashSet<String>();
         int cnt = 1;
@@ -32,7 +32,10 @@ class DataType
                 }
             }
             else
+            {
+                errorLine[1] = i;
                 return false;
+            }
         }
         return true;
     }
@@ -48,12 +51,12 @@ class Process
     public static Dictionary<String, String[]> processMap = new Dictionary<String, String[]>();
     public static Dictionary<String, String> processName = new Dictionary<String, String>();
     public static Dictionary<String, String[]> protocol = new Dictionary<String, String[]>();
-    public bool parse(int n, String[] parts, String regex)
+    public bool parse(int n, String[] parts, String regex, int[] errorLine)
     {
         bool found = true;
         for (int i = 1; i <= n; i++)
         {
-            var match = Regex.Match(parts[i], regex);
+            var match = Regex.Match(parts[i], regex,RegexOptions.IgnoreCase);
             if (match.Success)
             {
                 String procname = match.Groups[1].Value;
@@ -66,6 +69,7 @@ class Process
                     {
                         if (!datatypes.Contains(knownData[j]))
                         {
+                            errorLine[1] = i;
                             found = false;
                             break;
                         }
@@ -81,9 +85,15 @@ class Process
                 }
                 else
                 {
+                    errorLine[1] = i;
                     found = false;
                     break;
                 }
+            }
+            else
+            {
+                errorLine[1] = i;
+                found = false;
             }
         }
         return found;
@@ -98,10 +108,12 @@ class Keys
         {"AEnc","ADec"},
         {"SEnc","SDec"}
     };
+
+    public static HashSet<String> listofKeys = new HashSet<String>();
    
     public static String encryption = "";
     public static String decryption = "";
-    public bool parse(int n, String[] lines, String regex)
+    public bool parse(int n, String[] lines, String regex,int[] errorLineNumber)
     {
         bool isParseable = false;
         if (n == 0)
@@ -110,6 +122,7 @@ class Keys
         {
             Match match = Regex.Match(lines[1], Constants.constantMap["KeysSym"]);
             String[] keys = new String[2];
+            Keys.encryption = "SEnc";
             if (match.Success)
             {
                 isParseable = true;
@@ -117,13 +130,20 @@ class Keys
                 String agent2 = match.Groups[2].Value;
                 keys[0] = match.Groups[3].Value;
                 keys[1] = match.Groups[4].Value;
+                listofKeys.Add(keys[0]);
+                listofKeys.Add(keys[1]);
                 keyMap[agent1] = keys;
                 keyMap[agent2] = keys;
                 inversekeys[keys[0]] = keys[1];
             }
+            else
+            {
+                errorLineNumber[1] = 1;
+            }
         }
         else if (n == 2)
         {
+            Keys.encryption = "AEnc";
             for (int i = 1; i <= n; i++)
             {
                 Match match = Regex.Match(lines[i], Constants.constantMap["KeysAsym"]);
@@ -134,12 +154,23 @@ class Keys
                     String agent = match.Groups[1].Value;
                     keys[0] = match.Groups[2].Value;
                     keys[1] = match.Groups[3].Value;
+                    listofKeys.Add(keys[0]);
+                    listofKeys.Add(keys[1]);
                     keyMap[agent] = keys;
                     inversekeys[keys[0]] = keys[1];
                 }
                 else
+                {
+                    errorLineNumber[1] = i;
                     isParseable = false;
+                    break;
+                }
             }
+        }
+        else
+        {
+            isParseable = false;
+            errorLineNumber[1] = 0;
         }
         return isParseable;
     }
@@ -148,7 +179,7 @@ class Keys
 class Agents
 {
     public static Dictionary<string, string> agentMap = new Dictionary<string, string>();
-    public bool parse(int n, String[] lines, String regex)
+    public bool parse(int n, String[] lines, String regex, int[] errorLine)
     {
         for (int i = 1; i <= n; i++)
         {
@@ -158,7 +189,10 @@ class Agents
                 agentMap[match.Groups[1].Value] = match.Groups[2].Value;
             }
             else
+            {
+                errorLine[1] = i;
                 return false;
+            }
         }
         return true;
     }
@@ -169,6 +203,29 @@ public class Message
 {
     private String[] participators;
     private String[] keys;
+    private List<String[]> decisions;
+    private String decisionOrigin;
+
+    public String DecisionOrigin
+    {
+        get { return decisionOrigin; }
+        set { decisionOrigin = value; }
+    }
+
+    public List<String[]> Decisions
+    {
+        get { return decisions; }
+        set { decisions = value; }
+    }
+
+    private String comparison;
+
+    public String Comparison
+    {
+        get { return comparison; }
+        set { comparison = value; }
+    }
+
 
     public String[] Keys
     {
@@ -225,21 +282,34 @@ class Protocol
             if (temp.IndexOf(",") > 0)
             {
                 String[] key = new String[2];
-                Keys.encryption = match.Groups[1].Value;
+                if (Keys.encryption != match.Groups[1].Value)
+                    return false;
                 Keys.decryption = Keys.encdec[Keys.encryption];
                 message = temp.Substring(0, temp.IndexOf(","));
                 key[0] = temp.Substring(temp.IndexOf(",") + 1);
+                if (!Keys.listofKeys.Contains(key[0]))
+                {
+                    return false;
+                }
                 key[1] = Keys.inversekeys[key[0]];
                 m.Keys = key;
             }
             else
+            {
                 isParseable = false;
+                return isParseable;
+            }
         }
         else
         {
-            match = Regex.Match(str, Constants.constantMap["Message3"], RegexOptions.IgnoreCase);
+            match = Regex.Match(str, Constants.constantMap["Message3"]);
             if (match.Success)
                 message = match.Groups[1].Value;
+            else
+            {
+                isParseable = false;
+                return isParseable;
+            }
         }
         List<String> list = new List<String>();
         if (message.IndexOf(".") > 0)
@@ -249,7 +319,6 @@ class Protocol
         }
         else
             list.Add(message);
-
 
         for (int i = 0; i < list.Count; i++)
         {
@@ -278,21 +347,94 @@ class Protocol
         return true;
     }
 
-    public bool parseHelper(int n, String[] lines, String regex, List<Message> messages)
+
+    public bool parseDecision(String str, Message m)
+    {
+        bool isParseable = true;
+        try
+        {
+            String[] parts = str.Split(':');
+            m.DecisionOrigin = parts[0];
+            string[] andSeperator = new string[] { "&&" };
+            List<String[]> listOfDecisions = new List<String[]>();
+            if (str.IndexOf("&&") > 0)
+            {
+                String[] components = parts[1].Split(andSeperator, StringSplitOptions.None);
+                for (int i = 0; i < components.Length; i++)
+                {
+                    Match match = Regex.Match(components[i], Constants.constantMap["Decisions"]);
+                    if (!match.Success)
+                    {
+                        isParseable = false;
+                        break;
+                    }
+                    String[] sides = new String[2];
+                    sides[0] = match.Groups[2].Value;                    
+                    sides[1] = match.Groups[4].Value;
+                    m.Comparison = match.Groups[3].Value;
+                    if (!(Process.aliases.ContainsKey(m.DecisionOrigin + " " + sides[0]) || Process.processMap.ContainsKey(sides[0])))
+                    {
+                        isParseable = false;
+                        break;
+                    }
+                    listOfDecisions.Add(sides);
+                }
+            }
+            else
+            {
+                Match match = Regex.Match(parts[1], Constants.constantMap["Decisions"]);
+                if (!match.Success)
+                {
+                    isParseable = false;
+                }
+                String[] sides = new String[2];
+                sides[0] = match.Groups[2].Value;
+                sides[1] = match.Groups[4].Value;
+                m.Comparison = match.Groups[3].Value;
+                if (!(Process.aliases.ContainsKey(m.DecisionOrigin + " " + sides[0]) || Process.processMap.ContainsKey(sides[0])))
+                {
+                    isParseable = false;
+                }
+                listOfDecisions.Add(sides);
+            }
+            m.Decisions = listOfDecisions;
+        }
+        catch (Exception e)
+        {
+            isParseable = false;
+        }
+        return isParseable;
+    }
+
+    public bool parseHelper(int n, String[] lines, String regex, List<Message> messages,int[] errorLineNumber)
     {
         for (int i = 1; i <= n; i++)
         {
-            lines[i] = lines[i].Replace("\t", "");
             String[] parts = lines[i].Split(lineSeparator, StringSplitOptions.None);
             if (parts.Length < 2)
-                return false;
+            {
+                errorLineNumber[1] = i;
+                isParseable = false;
+                break;
+            }
             Message m = new Message();
             isParseable = parseProduction(parts[0], m);
             isParseable = isParseable && parseMessage(parts[1], m);
 
+            if (parts.Length > 2)
+            {
+                isParseable = isParseable && parseDecision(parts[2], m);
+            }
+
             if (true == isParseable)
                 messages.Add(m);
+            else
+            {
+                errorLineNumber[1] = i;
+                isParseable = false;
+                break;
+            }
         }
-        return true;
+        return isParseable;
     }
 }

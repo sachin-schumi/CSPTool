@@ -32,6 +32,84 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Lib_v0+equal+know">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\Lib_v0+equal+know.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Contracts">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\Microsoft.Contracts.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Common">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\PAT.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.Array">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.Array.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.Board">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.Board.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.CMethodDemo">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.CMethodDemo.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.Contract.Set">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.Contract.Set.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.DBM">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.DBM.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.DispersionGame">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.DispersionGame.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.EntryList">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.EntryList.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.Example">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.Example.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.Extinction">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.Extinction.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.Firewire_tree">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.Firewire_tree.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.HardwareAPIs">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.HardwareAPIs.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.HashTable">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.HashTable.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.Lift">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.Lift.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.List">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.List.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.Msmie">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.Msmie.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.Prob">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.Prob.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.Queue">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.Queue.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.SerializableList">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.SerializableList.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.Set">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.Set.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.Stack">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.Stack.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.Synapse">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.Synapse.dll</HintPath>
+    </Reference>
+    <Reference Include="PAT.Lib.VibePuzzle">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\PAT.Lib.VibePuzzle.dll</HintPath>
+    </Reference>
+    <Reference Include="Plus">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\Lib\Plus.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -44,6 +122,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CSPModel.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>

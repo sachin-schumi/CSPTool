@@ -4,25 +4,79 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-public class CSPGenerator
+class Error
+{
+    private int lineNumber;
+
+    public int LineNumber
+    {
+        get { return lineNumber; }
+        set { lineNumber = value; }
+    }
+    bool isError;
+
+    private String message;
+
+    public String Message
+    {
+        get { return message; }
+        set { message = value; }
+    }
+
+    public bool IsError
+    {
+        get { return isError; }
+        set { isError = value; }
+    }
+
+    public Error(int lineNumber,bool isError)
+    {
+        this.lineNumber = lineNumber;
+        this.isError = isError;
+    }
+}
+
+class CSPGenerator
 {
     public List<Message> messages = new List<Message>();
 
-    public bool checkInput(String input)
+    private String format(String input)
     {
+        char tab = '\u0009';
+        input = input.Replace(tab.ToString(), " ");
+
+        String[] patterns = {"[ ]{2,}",@"[\s]*(:)[\s]*",@"[\s]*(->)[\s]*",@"[\s]*(\|)[\s]*",@"[\s]*(,)[\s]*"
+                            ,@"[\s]*({)[\s]*",@"[\s]*(})",@"[\s]*(==)[\s]*",@"[\s]*(&&)[\s]*",@"[\s]*(!=)[\s]*"};
+        String[] replacements = {" ",":","->","|",",","{","}","==","&&","!="};
+
+        for(int i = 0; i < patterns.Length; i++)
+        {
+            Regex regex = new Regex(patterns[i], RegexOptions.None);
+            input = regex.Replace(input, replacements[i]);
+        }
+        return input;
+    }
+
+    public Error checkInput(String input)
+    {
+
+        input = format(input);
         InputParser parser = new InputParser();
 
         bool isParsed = parser.ParseFile(input, messages);
 
+        Error ex = new Error(0,false);
+
         if (false == isParsed)
         {
-            // Get error
-            Console.Error.WriteLine("");
-            // exit
+            ex.LineNumber = parser.errorlineNumber;
+            ex.IsError = true;
+            return ex;
         }
         else
             generateGrammar(messages);
-        return isParsed;
+        ex.IsError = false;
+        return ex;
         //InputState inputState = parser.getInputState();
     }
 
@@ -53,7 +107,7 @@ public class CSPGenerator
         }
         else
         {
-            variables.Append("var msg" + msgVariable + ";\r\n");
+            variables.Append("var<Unitype> msg" + msgVariable + ";\r\n");
             temp.Append("{msg" + msgVariable + " = "+ output +";}");
         }
         return temp;
@@ -90,7 +144,7 @@ public class CSPGenerator
         ,StringBuilder variables,ref int i)
     {
         genericVariable++;
-        variables.Append("var g" + genericVariable + ";\r\n");
+        variables.Append("var<Unitype> g" + genericVariable + ";\r\n");
         if (flag == "second")
         {
             output.Append("g" + genericVariable + "=g" + (pairVariable) + ".getsecond();");
@@ -177,8 +231,15 @@ public class CSPGenerator
                         if (isChannelData == true)
                         {
                             genericVariable++;
-                            variables.Append("var g" + genericVariable + ";\r\n");
-                            temp.Append("g" + genericVariable + "=g" + (genericVariable - 1) + ".result();");
+                            variables.Append("var<Unitype> g" + genericVariable + ";\r\n");
+                            if(isDecrypted == true)
+                            {
+                                temp.Append("g" + genericVariable + "=g" + (genericVariable - 1) + ".result();");
+                            }
+                            else
+                            {
+                                temp.Append("g" + genericVariable + "=g" + (genericVariable - 1) + ";");
+                            }
                             isChannelData = false;
                         }
                         else
@@ -249,6 +310,55 @@ public class CSPGenerator
      }
 
 
+    private String getRHSvariable(String rhs)
+    {
+        String[] parts = rhs.Split('.');
+        String output = "";
+        if (parts[0] == "Process")
+            output = parts[1];
+        else
+        {
+            output = Process.aliases[parts[0].Trim() + " " + parts[1].Trim()];
+        }
+        return output;
+    }
+
+    private StringBuilder generateDecisions(Message m, StringBuilder variables, ref int decisionVariable)
+    {
+        StringBuilder output = new StringBuilder("");
+        output.Append("{if(");
+        List<String[]> decisions = m.Decisions;
+        if(m.Comparison == "==")
+            variables.Append("var D" + decisionVariable + " = false;\r\n");
+        else
+            variables.Append("var D" + decisionVariable + " = true;\r\n");
+        for (int i = 0; i < decisions.Count; i++)
+        {
+            String datatype = DataType.typeSet[decisions[i][0]];
+            String lhs = decisions[i][0];
+            String rhs = decisions[i][1];
+            output.Append(lhs+".");
+            if(datatype.IndexOf("Nonce") >= 0)
+            {
+                output.Append("Nonceequal");
+            }
+            else
+            {
+                output.Append("Constantequal");
+            }
+            String rhsVariable = getRHSvariable(rhs);
+            output.Append("(" + rhsVariable + ")");
+            if (i < decisions.Count - 1)
+                output.Append(" && ");
+        }
+        if (m.Comparison == "==")
+            output.Append("){ D"+decisionVariable + " = true;}} -> ");
+        else
+            output.Append("){ D" + decisionVariable + " = false;}} -> ");
+        return output;
+    }
+
+
     public void generateGrammar(List<Message> messages)
     {
         StringBuilder variables = new StringBuilder("");
@@ -256,93 +366,125 @@ public class CSPGenerator
 
         variables.Append("#import \"Lib_v0+equal+know\";\r\n\r\n");
 
-        foreach (KeyValuePair<String, String> entry in DataType.typeSet)
+        try
         {
-            if (entry.Value.IndexOf("Nonce") >= 0)
-            {
-                variables.Append("var " + entry.Key + " = new Nonce();\r\n");
-            }
-            else
-            {
-                variables.Append("var " + entry.Key + " = new Constant();\r\n");
-            }
-        }
 
-        if (Keys.encryption == "AEnc")
-        {
-            foreach (KeyValuePair<String, String[]> entry in Keys.keyMap)
+            foreach (KeyValuePair<String, String> entry in DataType.typeSet)
             {
-                String[] k = entry.Value;
-                variables.Append("var<SKey> " + k[1] + "= new SKey();\r\n");
-                variables.Append("var<PKey> " + k[0] + "= new PKey(" + k[1] + ");\r\n");
+                if (entry.Value.IndexOf("Nonce") >= 0)
+                {
+                    variables.Append("var " + entry.Key + " = new Nonce();\r\n");
+                }
+                else
+                {
+                    variables.Append("var " + entry.Key + " = new Constant();\r\n");
+                }
             }
-        }
-        else if (Keys.encryption == "SEnc")
-        {
-            foreach (KeyValuePair<String, String[]> entry in Keys.keyMap)
+
+            if (Keys.encryption == "AEnc")
             {
-                String[] k = entry.Value;
-                variables.Append("var<SKey> " + k[1] + "= new SKey();\r\n");
-                break;
+                foreach (KeyValuePair<String, String[]> entry in Keys.keyMap)
+                {
+                    String[] k = entry.Value;
+                    variables.Append("var<SKey> " + k[1] + "= new SKey();\r\n");
+                    variables.Append("var<PKey> " + k[0] + "= new PKey(" + k[1] + ");\r\n");
+                }
             }
-        }
+            else if (Keys.encryption == "SEnc")
+            {
+                foreach (KeyValuePair<String, String[]> entry in Keys.keyMap)
+                {
+                    String[] k = entry.Value;
+                    variables.Append("var<SKey> " + k[1] + "= new SKey();\r\n");
+                    break;
+                }
+            }
 
-        variables.Append("\r\n\r\n");
-        variables.Append("channel ca 0;");
-        variables.Append("\r\n\r\n");
+            variables.Append("\r\n\r\n");
+            variables.Append("channel ca 0;");
+            variables.Append("\r\n\r\n");
 
-        String ini = messages[0].Participators[0];
-        output[ini] = new StringBuilder("");
-        String process = generateProcess(ini, Process.processName[ini]);
-        output[ini].Append(process);
-        String resp = messages[0].Participators[1];
-        output[resp] = new StringBuilder("");
-        process = generateProcess(resp, Process.processName[resp]);
-        output[resp].Append(process);
+            String ini = messages[0].Participators[0];
+            output[ini] = new StringBuilder("");
+            String process = generateProcess(ini, Process.processName[ini]);
+            output[ini].Append(process);
+            String resp = messages[0].Participators[1];
+            output[resp] = new StringBuilder("");
+            process = generateProcess(resp, Process.processName[resp]);
+            output[resp].Append(process);
 
-        int genericVariable = 1;
-        int msgVariable = 1;
-        int pairVariable = 1;
-        print(variables, output);
-        for (int i = 0; i < messages.Count; i++)
-        {
-            Message m = messages[i];
-            ini = m.Participators[0];
-            resp = m.Participators[1];
-            InputChannel(m, output, ref genericVariable, ref msgVariable, variables);
-            output[ini].Append(m.channel + m.InputChannel + ".msg" + msgVariable + " -> ");
+            int genericVariable = 1;
+            int msgVariable = 1;
+            int pairVariable = 1;
+            int decisionVariable = 1;
             print(variables, output);
-            msgVariable++;
-            output[resp].Append(m.channel + m.OutputChannel + ".g" + genericVariable + " -> ");
-            HashSet<String> components = new HashSet<String>();
-            if (i + 1 < messages.Count)
-                components = new HashSet<String>(messages[i + 1].MessageComponents);
-            bool isDecrypted = false;
-            if (m.Keys != null)
-                isDecrypted = true;
-            OutputChannel(m, output,ref genericVariable,ref msgVariable, variables, components, isDecrypted, ref pairVariable);
-            print(variables, output);
+            for (int i = 0; i < messages.Count; i++)
+            {
+                Message m = messages[i];
+                ini = m.Participators[0];
+                resp = m.Participators[1];
+                InputChannel(m, output, ref genericVariable, ref msgVariable, variables);
+                output[ini].Append(m.channel + m.InputChannel + ".msg" + msgVariable + " -> ");
+                if (m.DecisionOrigin == ini)
+                {
+                    output[ini].Append(generateDecisions(m, variables, ref decisionVariable));
+                    decisionVariable++;
+                }
+                print(variables, output);
+                msgVariable++;
+                output[resp].Append(m.channel + m.OutputChannel + ".g" + genericVariable + " -> ");
+                HashSet<String> components = new HashSet<String>();
+                if (i + 1 < messages.Count)
+                    components = new HashSet<String>(messages[i + 1].MessageComponents);
+                bool isDecrypted = false;
+                if (m.Keys != null)
+                    isDecrypted = true;
+                OutputChannel(m, output, ref genericVariable, ref msgVariable, variables, components, isDecrypted, ref pairVariable);
+                if (m.DecisionOrigin == resp)
+                {
+                    output[resp].Append(generateDecisions(m, variables, ref decisionVariable));
+                    decisionVariable++;
+                }
+                print(variables, output);
 
-        }
-        File.AppendAllText(@"C:\FSDT\file.csp", variables + Environment.NewLine);
-        StringBuilder protocol = new StringBuilder("Protocol = ");
-        int count = 0;
-        foreach (KeyValuePair<String, String[]> entry in Process.protocol)
-        {
-            String[] data = entry.Value;
-            protocol.Append( entry.Key + "(" + String.Join(",",data) + ")");
-            if(count < Process.protocol.Count - 1)
-                protocol.Append(" ||| ");
-            count++;
-        }
-        protocol.Append(";\r\n\r\n #assert Protocol deadlockfree;\r\n");
+            }
+            StringBuilder success = new StringBuilder("");
+            if (decisionVariable > 1)
+            {
+                success = new StringBuilder("#define success {");
 
-        List<StringBuilder> outputValues = new List<StringBuilder>(output.Values);
-        foreach (StringBuilder s in outputValues)
-        {
-            String s1 = s + "Skip;";
-            File.AppendAllText(@"C:\FSDT\file.csp", s1 + "\r\n\r\n");
+                for (int i = 1; i <= decisionVariable - 1; i++)
+                {
+                    success.Append("D" + i + " == true");
+                    if (i <= decisionVariable - 2)
+                        success.Append(" && ");
+                }
+                success.Append("};\r\n#assert Protocol reaches success;\r\n");
+            }
+            File.AppendAllText(@"C:\FSDT\file.csp", variables + Environment.NewLine);
+            StringBuilder protocol = new StringBuilder("Protocol = ");
+            int count = 0;
+            foreach (KeyValuePair<String, String[]> entry in Process.protocol)
+            {
+                String[] data = entry.Value;
+                protocol.Append(entry.Key + "(" + String.Join(",", data) + ")");
+                if (count < Process.protocol.Count - 1)
+                    protocol.Append(" ||| ");
+                count++;
+            }
+            protocol.Append(";\r\n\r\n #assert Protocol deadlockfree;\r\n");
+
+            List<StringBuilder> outputValues = new List<StringBuilder>(output.Values);
+            foreach (StringBuilder s in outputValues)
+            {
+                String s1 = s + "Skip;";
+                File.AppendAllText(@"C:\FSDT\file.csp", s1 + "\r\n\r\n");
+            }
+            File.AppendAllText(@"C:\FSDT\file.csp", protocol + "\r\n");
+            File.AppendAllText(@"C:\FSDT\file.csp", success + "\r\n");
         }
-        File.AppendAllText(@"C:\FSDT\file.csp", protocol + "\r\n");
+        catch (Exception e)
+        { 
+        }
     }
 }

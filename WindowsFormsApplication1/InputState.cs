@@ -43,7 +43,6 @@ class DataType
 
 class Process
 {
-    HashSet<string> agents = new HashSet<string>(Agents.agentMap.Values);
     HashSet<string> datatypes = new HashSet<string>(DataType.typeSet.Keys);
     public static Dictionary<String, String> aliases = new Dictionary<string, string>();
 
@@ -61,7 +60,7 @@ class Process
             {
                 String procname = match.Groups[1].Value;
                 String agent = match.Groups[2].Value;
-                if (agents.Contains(agent))
+                if (Agents.agentMap.Contains(agent))
                 {
                     processName[agent] = procname;
                     String[] knownData = match.Groups[3].Value.Split(',');
@@ -178,7 +177,7 @@ class Keys
 
 class Agents
 {
-    public static Dictionary<string, string> agentMap = new Dictionary<string, string>();
+    public static HashSet<String> agentMap = new HashSet<String>();
     public bool parse(int n, String[] lines, String regex, int[] errorLine)
     {
         for (int i = 1; i <= n; i++)
@@ -186,7 +185,7 @@ class Agents
             Match match = Regex.Match(lines[i], regex);
             if (match.Success)
             {
-                agentMap[match.Groups[1].Value] = match.Groups[2].Value;
+                agentMap.Add(match.Groups[1].Value);// = match.Groups[2].Value;
             }
             else
             {
@@ -269,7 +268,6 @@ public class Message
 class Protocol
 {
     readonly string[] lineSeparator = new string[] { "|" };
-    Dictionary<string, string> agents = new Dictionary<string, string>(Agents.agentMap);
     bool isParseable = true;
 
     public bool parseMessage(String str, Message m)
@@ -339,7 +337,7 @@ class Protocol
         String[] participators = new String[2];
         participators[0] = match.Groups[1].Value;
         participators[1] = match.Groups[2].Value;
-        if (!(agents.ContainsValue(participators[0]) && agents.ContainsValue(participators[1])))
+        if (!(Agents.agentMap.Contains(participators[0]) && Agents.agentMap.Contains(participators[1])))
             return false;
         m.Participators = participators;
         m.InputChannel = "!" + DataType.typeSet[participators[0]];
@@ -401,6 +399,7 @@ class Protocol
         }
         catch (Exception e)
         {
+            Console.WriteLine(e.Message);
             isParseable = false;
         }
         return isParseable;
@@ -408,32 +407,39 @@ class Protocol
 
     public bool parseHelper(int n, String[] lines, String regex, List<Message> messages,int[] errorLineNumber)
     {
-        for (int i = 1; i <= n; i++)
+        try
         {
-            String[] parts = lines[i].Split(lineSeparator, StringSplitOptions.None);
-            if (parts.Length < 2)
+            for (int i = 1; i <= n; i++)
             {
-                errorLineNumber[1] = i;
-                isParseable = false;
-                break;
-            }
-            Message m = new Message();
-            isParseable = parseProduction(parts[0], m);
-            isParseable = isParseable && parseMessage(parts[1], m);
+                String[] parts = lines[i].Split(lineSeparator, StringSplitOptions.None);
+                if (parts.Length < 2)
+                {
+                    errorLineNumber[1] = i;
+                    isParseable = false;
+                    break;
+                }
+                Message m = new Message();
+                isParseable = parseProduction(parts[0], m);
+                isParseable = isParseable && parseMessage(parts[1], m);
 
-            if (parts.Length > 2)
-            {
-                isParseable = isParseable && parseDecision(parts[2], m);
-            }
+                if (parts.Length > 2)
+                {
+                    isParseable = isParseable && parseDecision(parts[2], m);
+                }
 
-            if (true == isParseable)
-                messages.Add(m);
-            else
-            {
-                errorLineNumber[1] = i;
-                isParseable = false;
-                break;
+                if (true == isParseable)
+                    messages.Add(m);
+                else
+                {
+                    errorLineNumber[1] = i;
+                    isParseable = false;
+                    break;
+                }
             }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
         }
         return isParseable;
     }

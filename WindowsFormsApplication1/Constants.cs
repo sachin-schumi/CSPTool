@@ -8,7 +8,7 @@ using System.Windows.Forms;
 public class Constants {
     public static Dictionary<string, string> constantMap = new Dictionary<string, string>()
     {
-        {"Agents",@"([\w\d]+):([\w\d]+)"},
+        {"Agents",@"([\w\d]+)"},
         {"DataType",@"([\w\d]+):([\w\d]+)"},
         {"Process",@"([\w\d]+):([\w\d]+)[\s]knows[\s]([\w\d,]+)"},
         {"Keys",@""},

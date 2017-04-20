@@ -68,13 +68,15 @@ namespace WindowsFormsApplication1
                 ex = c.checkInput(s);
                 if (ex.IsError == false)
                 {
+
+                    Cursor.Current = Cursors.WaitCursor;
                     ex = addAttacker(@"C:\FSDT\file.csp", "Protocol");
                     if (ex.IsError == false)
                     {
                         System.Diagnostics.Process process = new System.Diagnostics.Process();
                         process.StartInfo.Verb = "runas";
                         process.StartInfo.FileName = @"C:\Program Files\Process Analysis Toolkit\Process Analysis Toolkit 3.5.1\PAT 3.exe";
-                        process.StartInfo.Arguments = @"C:\FSDT\file.csp";
+                        process.StartInfo.Arguments = @"C:\FSDT\file_full.csp";
                         process.StartInfo.WindowStyle = ProcessWindowStyle.Maximized;
                         process.Start();
                     }
